@@ -19,10 +19,14 @@
 Implements the breadth first search algorithm.
 '''
 
-from collections import deque
 import logging
+from collections import deque
 
-from . import searchspace
+from search.visualization.visualizer import graphplan
+
+from search import searchspace
+
+list_nodes = []
 
 
 def breadth_first_search(planning_task):
@@ -39,6 +43,7 @@ def breadth_first_search(planning_task):
     # fifo-queue storing the nodes which are next to explore
     queue = deque()
     queue.append(searchspace.make_root_node(planning_task.initial_state))
+    list_nodes.append(searchspace.make_root_node(planning_task.initial_state))
     # set storing the explored nodes, used for duplicate detection
     closed = {planning_task.initial_state}
     while queue:
@@ -51,12 +56,15 @@ def breadth_first_search(planning_task):
         if planning_task.goal_reached(node.state):
             logging.info("Goal reached. Start extraction of solution.")
             logging.info("%d Nodes expanded" % iteration)
+            graphplan(list_nodes, node)
             return node.extract_solution()
         for operator, successor_state in planning_task.get_successor_states(
                                                                    node.state):
             # duplicate detection
             if successor_state not in closed:
                 queue.append(searchspace.make_child_node(node, operator,
+                                                         successor_state))
+                list_nodes.append(searchspace.make_child_node(node, operator,
                                                          successor_state))
                  # remember the successor state
                 closed.add(successor_state)
