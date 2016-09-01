@@ -19,10 +19,14 @@
 Implements the enforced hill climbing search algorithm.
 """
 
+import logging
 from collections import deque
 
-import logging
-from . import searchspace
+from search.visualization.visualizer import graphplan
+
+from search import searchspace
+
+list_nodes =[]
 
 
 def enforced_hillclimbing_search(planning_task, heuristic,
@@ -41,6 +45,7 @@ def enforced_hillclimbing_search(planning_task, heuristic,
     queue = deque()
     initial_node = searchspace.make_root_node(planning_task.initial_state)
     queue.append(initial_node)
+    list_nodes.append(initial_node)
     best_heuristic_value = heuristic(initial_node)
     logging.info("Initial h value: %f" % best_heuristic_value)
     # set storing the explored nodes, used for duplicate detection
@@ -57,6 +62,7 @@ def enforced_hillclimbing_search(planning_task, heuristic,
         if planning_task.goal_reached(node.state):
             logging.info("Goal reached. Start extraction of solution.")
             logging.info("%d Nodes expanded" % len(visited))
+            graphplan(list_nodes, node)
             return node.extract_solution()
 
         # for the preferred operator version --> recompute heuristic and
@@ -96,9 +102,11 @@ def enforced_hillclimbing_search(planning_task, heuristic,
                     closed.clear()
                     best_heuristic_value = heuristic_value
                     queue.append(successor_node)
+                    list_nodes.append(successor_node)
                     break
                 else:
                     queue.append(successor_node)
+                    list_nodes.append(successor_node)
     logging.info("No operators left. Task unsolvable.")
     logging.info("%d Nodes expanded" % len(visited))
     return None

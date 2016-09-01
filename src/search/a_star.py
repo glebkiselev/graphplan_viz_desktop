@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 # This file is part of pyperplan.
 #
@@ -22,8 +23,14 @@ Implements the A* (a-star) and weighted A* search algorithm.
 import heapq
 import logging
 
+from search.visualization.visualizer import graphplan
+
 from search import searchspace
-from task import Task
+
+
+#seed(42)
+#seed_rng(42)
+
 
 
 def ordered_node_astar(node, h, node_tiebreaker):
@@ -120,18 +127,30 @@ def astar_search(task, heuristic, make_open_entry=ordered_node_astar,
                            ordered_node_greedy_best_first with obvious
                            meanings.
     """
+
+
+
+
+
     open = []
     state_cost = {task.initial_state: 0}
     node_tiebreaker = 0
 
+    list_nodes = []
+    additional_nodes = []
     root = searchspace.make_root_node(task.initial_state)
     init_h = heuristic(root)
+
+    list_nodes.append(root)
+
     heapq.heappush(open, make_open_entry(root, init_h, node_tiebreaker))
     logging.info("Initial h value: %f" % init_h)
-
+    # бесконечность
     besth = float('inf')
     counter = 0
     expansions = 0
+
+
 
     while open:
         (f, h, _tie, pop_node) = heapq.heappop(open)
@@ -139,7 +158,6 @@ def astar_search(task, heuristic, make_open_entry=ordered_node_astar,
             besth = h
             logging.debug("Found new best h: %d after %d expansions" %
                           (besth, counter))
-
         pop_state = pop_node.state
         # Only expand the node if its associated cost (g value) is the lowest
         # cost known for this state. Otherwise we already found a cheaper
@@ -150,13 +168,19 @@ def astar_search(task, heuristic, make_open_entry=ordered_node_astar,
             if task.goal_reached(pop_state):
                 logging.info("Goal reached. Start extraction of solution.")
                 logging.info("%d Nodes expanded" % expansions)
+
+                graphplan(list_nodes, pop_node)
+
                 return pop_node.extract_solution()
+
+
             rplan = None
             if use_relaxed_plan:
                 (rh, rplan) = heuristic.calc_h_with_plan(
                                         searchspace.make_root_node(pop_state))
                 logging.debug("relaxed plan %s " % rplan)
 
+                # receiving all satisfying states and actions
             for op, succ_state in task.get_successor_states(pop_state):
                 if use_relaxed_plan:
                     if rplan and not op.name in rplan:
@@ -167,23 +191,29 @@ def astar_search(task, heuristic, make_open_entry=ordered_node_astar,
                         continue
                     else:
                         logging.debug('keeping operator %s' % op.name)
-
+                # receiving next node
                 succ_node = searchspace.make_child_node(pop_node, op,
                                                         succ_state)
+                if succ_node not in list_nodes:
+                    list_nodes.append(succ_node)
+                else:
+                    additional_nodes.append(succ_node)
+
                 h = heuristic(succ_node)
                 if h == float('inf'):
-                    # don't bother with states that can't reach the goal anyway
+                    # take only states that can lead to aim
                     continue
+                    # saving current state's cost
                 old_succ_g = state_cost.get(succ_state, float("inf"))
+                    # either we didn't see satisfing state before, or just find cheaper path
                 if succ_node.g < old_succ_g:
-                    # We either never saw succ_state before, or we found a
-                    # cheaper path to succ_state than previously.
                     node_tiebreaker += 1
                     heapq.heappush(open, make_open_entry(succ_node, h,
                                                          node_tiebreaker))
                     state_cost[succ_state] = succ_node.g
-
         counter += 1
+
     logging.info("No operators left. Task unsolvable.")
     logging.info("%d Nodes expanded" % expansions)
+
     return None
